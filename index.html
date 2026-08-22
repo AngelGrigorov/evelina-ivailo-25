@@ -366,7 +366,7 @@
       <div class="link r d3" aria-hidden="true"></div>
 
       <figure class="r d4">
-        <div class="frame fixed" id="frame2026">
+        <div class="frame fixed empty" id="frame2026">
           <img id="img2026" src="photos/2026.jpg" alt="Евелина и Ивайло, 2026">
           <div class="ph">
             <svg viewBox="0 0 200 200" aria-hidden="true">
@@ -426,16 +426,20 @@
 </script>
 
 <script>
-/* Снимката от 2026: първо photos/2026.jpg, после кой да е файл в photos/2026/ */
+/* Кадърът от 2026: първо photos/2026.jpg, после кой да е файл в photos/2026/.
+   Рамката стои с медальона, докато няма потвърдено заредена снимка. */
 (function(){
   var img = document.getElementById('img2026');
   if(!img) return;
   var frame = img.parentNode;
   var API = 'https://api.github.com/repos/AngelGrigorov/evelina-ivailo-25/contents/photos/2026';
+  var tried = false;
 
-  function giveUp(){ frame.classList.add('empty'); }
+  function shown(){ frame.classList.remove('empty'); }
 
-  function fromFolder(){
+  function lookInFolder(){
+    if(tried) return;
+    tried = true;
     fetch(API + '?t=' + Date.now())
       .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
       .then(function(list){
@@ -443,16 +447,19 @@
           return x.type === 'file' && /\.(jpe?g|png|webp|gif)$/i.test(x.name);
         });
         var f = imgs.filter(function(x){ return /^photo\./i.test(x.name); })[0] || imgs[0];
-        if(!f) return Promise.reject();
-        var probe = new Image();
-        probe.onload = function(){ img.src = f.download_url; frame.classList.remove('empty'); };
-        probe.onerror = giveUp;
-        probe.src = f.download_url;
+        if(f) img.src = f.download_url;
       })
-      .catch(giveUp);
+      .catch(function(){});
   }
 
-  img.onerror = function(){ frame.classList.add('empty'); fromFolder(); };
+  img.onload  = shown;
+  img.onerror = lookInFolder;
+
+  /* снимката може да е свършила да се зарежда още преди този скрипт да се изпълни */
+  if(img.complete){
+    if(img.naturalWidth > 0) shown();
+    else lookInFolder();
+  }
 })();
 </script>
 </body>
