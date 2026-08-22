@@ -177,6 +177,38 @@
     .gallery figure.span{grid-column:1 / -1}
   }
 
+  /* ── 2001 → 2026 ───────────────────────────────── */
+  .diptych{
+    display:flex;flex-direction:column;align-items:center;
+    gap:1.2rem;width:100%;max-width:var(--measure);
+  }
+  .diptych figure{width:100%;max-width:22rem}
+  .diptych figcaption{
+    font-family:var(--serif);font-size:1rem;letter-spacing:.34em;
+    text-transform:none;color:var(--silver-3);margin-top:.9rem;
+  }
+  .link{
+    width:1px;height:2.6rem;flex:none;
+    background:linear-gradient(to bottom,transparent,var(--line) 25%,var(--line) 75%,transparent);
+  }
+  .frame.fixed{aspect-ratio:4/5}
+  .frame.fixed img{height:100%}
+  .frame .ph{
+    display:none;position:absolute;inset:0;
+    align-items:center;justify-content:center;
+    background:linear-gradient(150deg,#121828,#090d18);
+  }
+  .frame.empty .ph{display:flex}
+  #frame2026.empty img{display:none}
+  .frame .ph svg{width:46%;height:auto;opacity:.75}
+
+  @media (min-width:46rem){
+    .diptych{flex-direction:row;align-items:flex-start;justify-content:center;gap:1.4rem;max-width:40rem}
+    .diptych figure{max-width:none;flex:1}
+    .link{width:2.6rem;height:1px;margin-top:22%;
+      background:linear-gradient(to right,transparent,var(--line) 25%,var(--line) 75%,transparent);}
+  }
+
   /* ── финал ─────────────────────────────────────── */
   .closing{padding-bottom:clamp(5rem,16vh,10rem)}
   .signature{
@@ -297,14 +329,55 @@
     </div>
   </section>
 
-  <!-- СНИМКИ -->
+  <!-- СВАТБАТА -->
   <section id="s5">
-    <p class="eyebrow r" style="margin-bottom:2.6rem">Двадесет и пет години в няколко кадъра</p>
+    <p class="eyebrow r" style="margin-bottom:2.8rem">Сватбата, 2001</p>
     <div class="gallery">
-      <figure class="r d1"><div class="frame"><img src="photos/1.jpg" alt="Евелина и Ивайло"></div></figure>
-      <figure class="r d2"><div class="frame"><img src="photos/2.jpg" alt="Евелина и Ивайло"></div></figure>
-      <figure class="span r d3"><div class="frame wide"><img src="photos/3.jpg" alt="Евелина и Ивайло"></div></figure>
-      <figure class="span r d4"><div class="frame wide"><img src="photos/4.jpg" alt="Евелина и Ивайло"></div></figure>
+      <figure class="r d1"><div class="frame"><img src="photos/w1.jpg" alt="Евелина и Ивайло" loading="lazy"></div></figure>
+      <figure class="r d2"><div class="frame"><img src="photos/w2.jpg" alt="Евелина и Ивайло" loading="lazy"></div></figure>
+      <figure class="r d3"><div class="frame"><img src="photos/w3.jpg" alt="Евелина и Ивайло" loading="lazy"></div></figure>
+      <figure class="r d4"><div class="frame"><img src="photos/w4.jpg" alt="Евелина и Ивайло" loading="lazy"></div></figure>
+    </div>
+  </section>
+
+  <!-- ГОДИНИТЕ СЛЕД ТОВА -->
+  <section id="s6">
+    <p class="eyebrow r" style="margin-bottom:2.8rem">Годините след това</p>
+    <div class="gallery">
+      <figure class="r d1"><div class="frame"><img src="photos/t1.jpg" alt="Евелина и Ивайло" loading="lazy"></div></figure>
+      <figure class="r d2"><div class="frame"><img src="photos/t2.jpg" alt="Евелина и Ивайло" loading="lazy"></div></figure>
+    </div>
+  </section>
+
+  <!-- 2001 → 2026 -->
+  <section id="s6b">
+    <div class="divider r"><span class="dot"></span></div>
+    <p class="lead r d1" style="margin-top:2.4rem;margin-bottom:2.8rem">
+      Двайсет и пет години между двата кадъра.
+    </p>
+
+    <div class="diptych">
+      <figure class="r d2">
+        <div class="frame fixed"><img src="photos/2001.jpg" alt="Евелина и Ивайло, 2001"></div>
+        <figcaption>2001</figcaption>
+      </figure>
+
+      <div class="link r d3" aria-hidden="true"></div>
+
+      <figure class="r d4">
+        <div class="frame fixed" id="frame2026">
+          <img id="img2026" src="photos/2026.jpg" alt="Евелина и Ивайло, 2026">
+          <div class="ph">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <circle cx="100" cy="100" r="70" fill="none" stroke="#8f97ab" stroke-width="2" opacity=".7"/>
+              <circle cx="100" cy="100" r="60" fill="none" stroke="#8f97ab" stroke-width=".8" opacity=".45"/>
+              <text x="100" y="118" text-anchor="middle" font-family="'Noto Serif SC',serif"
+                    font-size="56" fill="#aab2c4" opacity=".8">馬</text>
+            </svg>
+          </div>
+        </div>
+        <figcaption>2026</figcaption>
+      </figure>
     </div>
   </section>
 
@@ -351,5 +424,34 @@
 })();
 </script>
 
+<script>
+/* Снимката от 2026: първо photos/2026.jpg, после кой да е файл в photos/2026/ */
+(function(){
+  var img = document.getElementById('img2026');
+  if(!img) return;
+  var frame = img.parentNode;
+  var API = 'https://api.github.com/repos/AngelGrigorov/evelina-ivailo-25/contents/photos/2026';
+
+  function giveUp(){ frame.classList.add('empty'); }
+
+  function fromFolder(){
+    fetch(API + '?t=' + Date.now())
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+      .then(function(list){
+        var f = (list || []).filter(function(x){
+          return x.type === 'file' && /\.(jpe?g|png|webp|gif)$/i.test(x.name);
+        })[0];
+        if(!f) return Promise.reject();
+        var probe = new Image();
+        probe.onload = function(){ img.src = f.download_url; frame.classList.remove('empty'); };
+        probe.onerror = giveUp;
+        probe.src = f.download_url;
+      })
+      .catch(giveUp);
+  }
+
+  img.onerror = function(){ frame.classList.add('empty'); fromFolder(); };
+})();
+</script>
 </body>
 </html>
