@@ -426,42 +426,84 @@
 </script>
 
 <script>
-/* Кадърът от 2026: първо photos/2026.jpg, после кой да е файл в photos/2026/.
-   Рамката стои с медальона, докато няма потвърдено заредена снимка. */
+/* Кадърът от 2026 се качва ръчно в photos/2026 през github.com.
+   Името му идва от телефона и е непредвидимо, затова питаме GitHub
+   кой файл е дошъл с последния комит. Адресът се закача за комита —
+   иначе CDN-ът връща предишната снимка от кеша. */
 (function(){
   var img = document.getElementById('img2026');
   if(!img) return;
+
   var frame = img.parentNode;
-  var API = 'https://api.github.com/repos/AngelGrigorov/evelina-ivailo-25/contents/photos/2026';
-  var tried = false;
+  var REPO  = 'AngelGrigorov/evelina-ivailo-25';
+  var DIR   = 'photos/2026';
+  var BASE  = 'https://api.github.com/repos/' + REPO;
+  var RAW   = 'https://raw.githubusercontent.com/' + REPO + '/';
+  var IS_IMG = /\.(jpe?g|png|webp|gif)$/i;
+  var asked = false;
 
-  function shown(){ frame.classList.remove('empty'); }
+  function show(){ frame.classList.remove('empty'); }
 
-  function lookInFolder(){
-    if(tried) return;
-    tried = true;
-    fetch(API + '?t=' + Date.now())
-      .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+  function get(url){
+    return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now())
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(); });
+  }
+
+  function newestName(files){
+    return files.map(function(x){ return x.name; })
+                .sort()
+                .pop();
+  }
+
+  function look(){
+    if(asked) return;
+    asked = true;
+
+    var found = [];
+
+    get(BASE + '/contents/' + DIR)
       .then(function(list){
-        var imgs = (list || []).filter(function(x){
-          return x.type === 'file' && /\.(jpe?g|png|webp|gif)$/i.test(x.name);
-        }).sort(function(a, b){ return a.name < b.name ? 1 : -1; });   /* най-новото първо */
+        found = (list || []).filter(function(x){
+          return x.type === 'file' && IS_IMG.test(x.name);
+        });
+        if(!found.length) return Promise.reject();
 
-        /* качените от /upload носят дата в името: photo-20260822-2317.jpg */
-        var mine = imgs.filter(function(x){ return /^photo-/i.test(x.name); });
-        var f = mine[0] || imgs[0];
-        if(f) img.src = f.download_url;
+        /* последният комит, който е пипал папката */
+        return get(BASE + '/commits?path=' + DIR + '&per_page=1')
+          .then(function(cs){
+            if(!cs || !cs.length) return Promise.reject();
+            var sha = cs[0].sha;
+
+            if(found.length === 1){
+              return RAW + sha + '/' + encodeURI(found[0].path);
+            }
+            /* няколко файла: гледаме кой точно е добавен в този комит */
+            return get(BASE + '/commits/' + sha).then(function(c){
+              var f = (c.files || []).filter(function(x){
+                return x.status !== 'removed' &&
+                       IS_IMG.test(x.filename) &&
+                       x.filename.indexOf(DIR + '/') === 0;
+              })[0];
+              if(f && f.raw_url) return f.raw_url;
+              return RAW + sha + '/' + encodeURI(DIR + '/' + newestName(found));
+            });
+          })
+          .catch(function(){
+            /* ако нещо не потръгне, поне показваме нещо */
+            return found[found.length - 1].download_url;
+          });
       })
+      .then(function(url){ if(url) img.src = url; })
       .catch(function(){});
   }
 
-  img.onload  = shown;
-  img.onerror = lookInFolder;
+  img.onload  = show;
+  img.onerror = look;
 
-  /* снимката може да е свършила да се зарежда още преди този скрипт да се изпълни */
+  /* снимката може да е гръмнала още преди този скрипт да се изпълни */
   if(img.complete){
-    if(img.naturalWidth > 0) shown();
-    else lookInFolder();
+    if(img.naturalWidth > 0) show();
+    else look();
   }
 })();
 </script>
