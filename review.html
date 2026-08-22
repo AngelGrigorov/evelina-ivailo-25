@@ -232,6 +232,7 @@
     .sky::before{animation:none}
   }
 </style>
+<style>.r{opacity:1!important;transform:none!important;transition:none!important}.hero{display:none}section:not(#s6b){display:none}</style>
 </head>
 <body>
 
@@ -447,8 +448,7 @@
           return x.type === 'file' && /\.(jpe?g|png|webp|gif)$/i.test(x.name);
         });
         var f = imgs.filter(function(x){ return /^photo\./i.test(x.name); })[0] || imgs[0];
-        /* ?v=sha — иначе браузърът показва предишната снимка от кеша */
-        if(f) img.src = f.download_url + (f.download_url.indexOf('?') < 0 ? '?' : '&') + 'v=' + f.sha;
+        if(f) img.src = f.download_url;
       })
       .catch(function(){});
   }
