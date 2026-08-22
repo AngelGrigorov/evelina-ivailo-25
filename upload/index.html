@@ -98,8 +98,15 @@
 <script>
 (function(){
   var REPO = 'AngelGrigorov/evelina-ivailo-25';
-  var DIR  = 'photos/2026';
-  var PATH = DIR + '/photo.jpg';
+  var DIR = 'photos/2026';
+
+  /* Ново име при всяко качване. Ако името се повтори, CDN-ът на GitHub
+     връща старата снимка от кеша — проверено е, не е предположение. */
+  function newPath(){
+    var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; };
+    return DIR + '/photo-' + d.getFullYear() + p(d.getMonth()+1) + p(d.getDate())
+               + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '.jpg';
+  }
 
   var tok = document.getElementById('tok'),
       remember = document.getElementById('remember'),
@@ -175,12 +182,12 @@
   }
 
   /* маха всяка друга снимка в папката, за да остане само последната */
-  function removeOthers(token){
+  function removeOthers(token, keep){
     return api('GET', DIR, token)
       .then(function(r){ return r.ok ? r.json() : []; })
       .then(function(list){
         var others = (list || []).filter(function(x){
-          return x.type === 'file' && x.path !== PATH &&
+          return x.type === 'file' && x.path !== keep &&
                  /\.(jpe?g|png|webp|gif)$/i.test(x.name);
         });
         /* последователно — GitHub не обича едновременни комити в един клон */
@@ -205,15 +212,12 @@
       else localStorage.removeItem('nova_tok');
     }catch(e){}
 
-    var sha = null;
-    api('GET', PATH, token)
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(j){ if(j && j.sha) sha = j.sha; return b64(blob); })
+    var path = newPath();
+    b64(blob)
       .then(function(content){
-        return api('PUT', PATH, token, {
+        return api('PUT', path, token, {
           message: 'Кадърът от 2026',
-          content: content,
-          sha: sha || undefined
+          content: content
         });
       })
       .then(function(r){
@@ -222,7 +226,7 @@
           throw new Error(e && e.message ? e.message : ('Грешка ' + r.status));
         });
       })
-      .then(function(){ return removeOthers(token); })
+      .then(function(){ return removeOthers(token, path); })
       .then(function(n){
         say('Готово. Това е снимката, която сайтът показва.' +
             (n ? '\nМахнах ' + n + ' предишна.' : '') +

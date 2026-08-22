@@ -445,10 +445,12 @@
       .then(function(list){
         var imgs = (list || []).filter(function(x){
           return x.type === 'file' && /\.(jpe?g|png|webp|gif)$/i.test(x.name);
-        });
-        var f = imgs.filter(function(x){ return /^photo\./i.test(x.name); })[0] || imgs[0];
-        /* ?v=sha — иначе браузърът показва предишната снимка от кеша */
-        if(f) img.src = f.download_url + (f.download_url.indexOf('?') < 0 ? '?' : '&') + 'v=' + f.sha;
+        }).sort(function(a, b){ return a.name < b.name ? 1 : -1; });   /* най-новото първо */
+
+        /* качените от /upload носят дата в името: photo-20260822-2317.jpg */
+        var mine = imgs.filter(function(x){ return /^photo-/i.test(x.name); });
+        var f = mine[0] || imgs[0];
+        if(f) img.src = f.download_url;
       })
       .catch(function(){});
   }
