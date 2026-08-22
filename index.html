@@ -232,6 +232,7 @@
     .sky::before{animation:none}
   }
 </style>
+<noscript><style>.r{opacity:1!important;transform:none!important}</style></noscript>
 </head>
 <body>
 
@@ -367,7 +368,7 @@
 
       <figure class="r d4">
         <div class="frame fixed empty" id="frame2026">
-          <img id="img2026" src="photos/2026.jpg" alt="Евелина и Ивайло, 2026">
+          <img id="img2026" alt="Евелина и Ивайло, 2026">
           <div class="ph">
             <svg viewBox="0 0 200 200" aria-hidden="true">
               <circle cx="100" cy="100" r="70" fill="none" stroke="#8f97ab" stroke-width="2" opacity=".7"/>
@@ -426,10 +427,12 @@
 </script>
 
 <script>
-/* Кадърът от 2026 се качва ръчно в photos/2026 през github.com.
-   Името му идва от телефона и е непредвидимо, затова питаме GitHub
-   кой файл е дошъл с последния комит. Адресът се закача за комита —
-   иначе CDN-ът връща предишната снимка от кеша. */
+/* Кадърът от 2026.
+   Търси се в този ред, за да не зависи празненството от GitHub API:
+     1. photos/2026/kadar.txt — казва името на снимката. Нула запитвания.
+     2. photos/2026.jpg       — ако някога е сложена под това име.
+     3. GitHub API            — намира последно качения файл, каквото и да е името.
+   Показваме едва след като снимката е потвърдено заредена, за да няма счупена рамка. */
 (function(){
   var img = document.getElementById('img2026');
   if(!img) return;
@@ -438,73 +441,75 @@
   var REPO  = 'AngelGrigorov/evelina-ivailo-25';
   var DIR   = 'photos/2026';
   var BASE  = 'https://api.github.com/repos/' + REPO;
-  var RAW   = 'https://raw.githubusercontent.com/' + REPO + '/';
-  var IS_IMG = /\.(jpe?g|png|webp|gif)$/i;
-  var asked = false;
+  var NAME  = /^[^\s\/\]+\.(jpe?g|png|webp|gif)$/i;
 
-  function show(){ frame.classList.remove('empty'); }
+  function load(url){
+    return new Promise(function(ok, no){
+      var probe = new Image();
+      probe.onload  = function(){ ok(url); };
+      probe.onerror = function(){ no(); };
+      probe.src = url;
+    });
+  }
 
-  function get(url){
+  function json(url){
     return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now())
       .then(function(r){ return r.ok ? r.json() : Promise.reject(); });
   }
 
-  function newestName(files){
-    return files.map(function(x){ return x.name; })
-                .sort()
-                .pop();
+  /* 1. показалец: текстов файл с името на снимката */
+  function viaPointer(){
+    return fetch(DIR + '/kadar.txt?t=' + Date.now())
+      .then(function(r){ return r.ok ? r.text() : Promise.reject(); })
+      .then(function(text){
+        var name = (text || '').split(/\r?\n/)
+          .map(function(l){ return l.trim(); })
+          .filter(function(l){ return NAME.test(l); })[0];
+        if(!name) return Promise.reject();
+        return load(DIR + '/' + encodeURIComponent(name));
+      });
   }
 
-  function look(){
-    if(asked) return;
-    asked = true;
-
+  /* 3. през GitHub API — едно запитване, ако файлът е един */
+  function viaApi(){
     var found = [];
+    return json(BASE + '/contents/' + DIR).then(function(list){
+      found = (list || []).filter(function(x){
+        return x.type === 'file' && NAME.test(x.name);
+      });
+      if(!found.length) return Promise.reject();
+      if(found.length === 1) return load(found[0].download_url);
 
-    get(BASE + '/contents/' + DIR)
-      .then(function(list){
-        found = (list || []).filter(function(x){
-          return x.type === 'file' && IS_IMG.test(x.name);
+      /* няколко файла: питаме кой е дошъл с последния комит */
+      return json(BASE + '/commits?path=' + DIR + '&per_page=1')
+        .then(function(cs){
+          if(!cs || !cs.length) return Promise.reject();
+          return json(BASE + '/commits/' + cs[0].sha);
+        })
+        .then(function(c){
+          var f = (c.files || []).filter(function(x){
+            return x.status !== 'removed' &&
+                   x.filename.indexOf(DIR + '/') === 0 &&
+                   NAME.test(x.filename.split('/').pop());
+          })[0];
+          if(!f || !f.raw_url) return Promise.reject();
+          return load(f.raw_url);
+        })
+        .catch(function(){
+          found.sort(function(a, b){ return a.name < b.name ? -1 : 1; });
+          return load(found[found.length - 1].download_url);
         });
-        if(!found.length) return Promise.reject();
-
-        /* последният комит, който е пипал папката */
-        return get(BASE + '/commits?path=' + DIR + '&per_page=1')
-          .then(function(cs){
-            if(!cs || !cs.length) return Promise.reject();
-            var sha = cs[0].sha;
-
-            if(found.length === 1){
-              return RAW + sha + '/' + encodeURI(found[0].path);
-            }
-            /* няколко файла: гледаме кой точно е добавен в този комит */
-            return get(BASE + '/commits/' + sha).then(function(c){
-              var f = (c.files || []).filter(function(x){
-                return x.status !== 'removed' &&
-                       IS_IMG.test(x.filename) &&
-                       x.filename.indexOf(DIR + '/') === 0;
-              })[0];
-              if(f && f.raw_url) return f.raw_url;
-              return RAW + sha + '/' + encodeURI(DIR + '/' + newestName(found));
-            });
-          })
-          .catch(function(){
-            /* ако нещо не потръгне, поне показваме нещо */
-            return found[found.length - 1].download_url;
-          });
-      })
-      .then(function(url){ if(url) img.src = url; })
-      .catch(function(){});
+    });
   }
 
-  img.onload  = show;
-  img.onerror = look;
-
-  /* снимката може да е гръмнала още преди този скрипт да се изпълни */
-  if(img.complete){
-    if(img.naturalWidth > 0) show();
-    else look();
-  }
+  viaPointer()
+    .catch(function(){ return load('photos/2026.jpg'); })
+    .catch(function(){ return viaApi(); })
+    .then(function(url){
+      img.onload = function(){ frame.classList.remove('empty'); };
+      img.src = url;
+    })
+    .catch(function(){ /* още няма снимка — остава медальонът */ });
 })();
 </script>
 </body>
