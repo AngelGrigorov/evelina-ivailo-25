@@ -6,6 +6,7 @@
 <title>Евелина &amp; Ивайло — 25 години</title>
 <meta name="description" content="Двадесет и пет години заедно. Сребърна сватба, в годината на Огнения кон.">
 <meta name="theme-color" content="#070a14">
+<link rel="icon" href="data:,">
 <meta property="og:title" content="Евелина &amp; Ивайло — 25 години">
 <meta property="og:description" content="Сребърна сватба, в годината на Огнения кон.">
 <meta property="og:type" content="website">
@@ -438,9 +439,10 @@
     fetch(API + '?t=' + Date.now())
       .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
       .then(function(list){
-        var f = (list || []).filter(function(x){
+        var imgs = (list || []).filter(function(x){
           return x.type === 'file' && /\.(jpe?g|png|webp|gif)$/i.test(x.name);
-        })[0];
+        });
+        var f = imgs.filter(function(x){ return /^photo\./i.test(x.name); })[0] || imgs[0];
         if(!f) return Promise.reject();
         var probe = new Image();
         probe.onload = function(){ img.src = f.download_url; frame.classList.remove('empty'); };

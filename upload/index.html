@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Качване</title>
+<style>
+  :root{
+    --ink:#06080f; --panel:#0d1424; --line:rgba(236,238,244,.14);
+    --silver:#eceef4; --silver-2:#b9c0d0; --silver-3:#7e8699;
+    --gold:#d7b678; --ok:#7fd6a2; --err:#e79a9a;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:1.5rem 1.2rem 4rem;background:var(--ink);color:var(--silver-2);
+    font:400 16px/1.6 "Segoe UI",system-ui,-apple-system,sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:30rem;margin:0 auto}
+  h1{
+    font:300 1.5rem/1.3 Georgia,serif;color:var(--silver);
+    margin:.5rem 0 .3rem;letter-spacing:.01em;
+  }
+  .sub{font-size:.86rem;color:var(--silver-3);margin:0 0 2rem}
+
+  label{display:block;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;
+        color:var(--silver-3);margin:1.6rem 0 .5rem}
+  input[type=password],input[type=file]{
+    width:100%;padding:.85rem .9rem;background:var(--panel);color:var(--silver);
+    border:1px solid var(--line);border-radius:8px;font-size:16px;
+  }
+  input[type=file]{padding:.7rem}
+  .row{display:flex;align-items:center;gap:.6rem;margin-top:.7rem;font-size:.85rem;color:var(--silver-3)}
+  .row input{width:1.05rem;height:1.05rem;accent-color:var(--gold)}
+
+  button{
+    width:100%;margin-top:1.8rem;padding:1rem;border:0;border-radius:8px;
+    background:linear-gradient(160deg,#e8ebf2,#aab2c4);color:#0b1020;
+    font-size:1rem;font-weight:600;letter-spacing:.02em;
+  }
+  button:disabled{opacity:.45}
+
+  #preview{
+    display:none;margin-top:1.4rem;width:100%;border-radius:8px;
+    border:1px solid var(--line);
+  }
+  #msg{margin-top:1.4rem;font-size:.92rem;min-height:1.5rem;white-space:pre-line}
+  .ok{color:var(--ok)} .err{color:var(--err)} .wait{color:var(--gold)}
+
+  .help{
+    margin-top:3rem;padding-top:1.4rem;border-top:1px solid var(--line);
+    font-size:.8rem;line-height:1.75;color:var(--silver-3);
+  }
+  .help b{color:var(--silver-2);font-weight:600}
+  a{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Кадърът от 2026</h1>
+  <p class="sub">Качва се направо в сайта. Никой не получава известие.</p>
+
+  <label for="tok">Ключ</label>
+  <input id="tok" type="password" autocomplete="off" autocapitalize="off"
+         autocorrect="off" spellcheck="false" placeholder="github_pat_…">
+  <div class="row">
+    <input id="remember" type="checkbox" checked>
+    <label for="remember" style="margin:0;text-transform:none;letter-spacing:0;font-size:.85rem">
+      запомни ключа на този телефон
+    </label>
+  </div>
+
+  <label for="file">Снимка</label>
+  <input id="file" type="file" accept="image/*">
+  <img id="preview" alt="">
+
+  <button id="go" disabled>Качи</button>
+  <div id="msg"></div>
+
+  <div class="help">
+    <b>Ключът</b> се прави веднъж, от github.com → Settings → Developer settings →
+    Personal access tokens → Fine-grained tokens → Generate new token.
+    Достъп само до <b>evelina-ivailo-25</b>, права <b>Contents: Read and write</b>.
+    Ключът стои само на този телефон и никъде другаде.<br><br>
+    Ако нещо се обърка, същото става и през github.com — папка
+    <b>photos/2026</b> → Add file → Upload files. Името на файла е без значение.
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var REPO = 'AngelGrigorov/evelina-ivailo-25';
+  var PATH = 'photos/2026/photo.jpg';
+
+  var tok = document.getElementById('tok'),
+      remember = document.getElementById('remember'),
+      file = document.getElementById('file'),
+      preview = document.getElementById('preview'),
+      go = document.getElementById('go'),
+      msg = document.getElementById('msg');
+
+  var blob = null;
+
+  try{
+    var saved = localStorage.getItem('nova_tok');
+    if(saved){ tok.value = saved; }
+  }catch(e){}
+
+  function say(text, cls){ msg.textContent = text; msg.className = cls || ''; }
+  function check(){ go.disabled = !(tok.value.trim() && blob); }
+
+  tok.addEventListener('input', check);
+
+  file.addEventListener('change', function(){
+    var f = file.files && file.files[0];
+    blob = null; preview.style.display='none'; check();
+    if(!f) return;
+    say('Обработвам снимката…','wait');
+
+    var url = URL.createObjectURL(f);
+    var im = new Image();
+    im.onload = function(){
+      var max = 2000;
+      var s = Math.min(1, max/Math.max(im.width, im.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(im.width*s); c.height = Math.round(im.height*s);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      c.toBlob(function(b){
+        URL.revokeObjectURL(url);
+        if(!b){ say('Не мога да прочета тази снимка. Пробвай друга.','err'); return; }
+        blob = b;
+        preview.src = URL.createObjectURL(b);
+        preview.style.display = 'block';
+        say('Готова е: ' + Math.round(b.size/1024) + ' KB. Натисни «Качи».');
+        check();
+      }, 'image/jpeg', 0.85);
+    };
+    im.onerror = function(){
+      URL.revokeObjectURL(url);
+      say('Този формат не се отваря в браузъра. Пробвай да я снимаш или запазиш като JPG.','err');
+    };
+    im.src = url;
+  });
+
+  function b64(b){
+    return new Promise(function(res, rej){
+      var r = new FileReader();
+      r.onload = function(){ res(String(r.result).split(',')[1]); };
+      r.onerror = rej;
+      r.readAsDataURL(b);
+    });
+  }
+
+  function api(method, path, token, body){
+    return fetch('https://api.github.com/repos/' + REPO + '/contents/' + path + '?t=' + Date.now(), {
+      method: method,
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/vnd.github+json'
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+  }
+
+  go.addEventListener('click', function(){
+    var token = tok.value.trim();
+    if(!token || !blob) return;
+    go.disabled = true;
+    say('Качвам…','wait');
+
+    try{
+      if(remember.checked) localStorage.setItem('nova_tok', token);
+      else localStorage.removeItem('nova_tok');
+    }catch(e){}
+
+    var sha = null;
+    api('GET', PATH, token)
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){ if(j && j.sha) sha = j.sha; return b64(blob); })
+      .then(function(content){
+        return api('PUT', PATH, token, {
+          message: 'Кадърът от 2026',
+          content: content,
+          sha: sha || undefined
+        });
+      })
+      .then(function(r){
+        if(r.ok) return r.json();
+        return r.json().then(function(e){
+          throw new Error(e && e.message ? e.message : ('Грешка ' + r.status));
+        });
+      })
+      .then(function(){
+        say('Готово. Снимката вече е на сайта.\nОтвори го и провери.','ok');
+        go.disabled = false;
+      })
+      .catch(function(e){
+        var m = String(e && e.message || e);
+        if(/Bad credentials|401/.test(m)) m = 'Ключът не се приема. Провери го.';
+        else if(/Resource not accessible|403/.test(m)) m = 'Ключът няма права за писане в това репо.';
+        say('Не стана: ' + m, 'err');
+        go.disabled = false;
+      });
+  });
+
+  check();
+})();
+</script>
+</body>
+</html>
